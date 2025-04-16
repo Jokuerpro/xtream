@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Xtream IPTV Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <style>
     body {
       margin: 0;
@@ -11,13 +12,11 @@
       background-color: #111;
       color: #fff;
     }
-
     .container {
       max-width: 1200px;
       margin: auto;
       padding: 20px;
     }
-
     .login, .dashboard {
       display: none;
       background: #1a1a1a;
@@ -25,113 +24,45 @@
       border-radius: 12px;
       box-shadow: 0 0 20px #000;
     }
-
-    .login {
-      margin-top: 10vh;
-    }
-
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
+    .login { margin-top: 10vh; }
+    h2 { text-align: center; margin-bottom: 20px; }
     input, button {
-      width: 100%;
-      padding: 12px;
-      margin: 10px 0;
-      border-radius: 6px;
-      border: none;
-      font-size: 16px;
+      width: 100%; padding: 12px; margin: 10px 0;
+      border-radius: 6px; border: none; font-size: 16px;
     }
-
-    input {
-      background-color: #222;
-      color: #fff;
-    }
-
-    button {
-      background-color: #28a745;
-      color: #fff;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #218838;
-    }
-
+    input { background-color: #222; color: #fff; }
+    button { background-color: #28a745; color: #fff; cursor: pointer; }
+    button:hover { background-color: #218838; }
     .info {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      background: #1e1e1e;
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 20px;
+      display: flex; flex-wrap: wrap; gap: 10px;
+      background: #1e1e1e; padding: 15px; border-radius: 10px; margin-bottom: 20px;
     }
-
-    .info div {
-      flex: 1 1 150px;
-      font-size: 14px;
-    }
-
-    .tabs {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-
+    .info div { flex: 1 1 150px; font-size: 14px; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
     .tab {
-      background: #333;
-      padding: 10px 20px;
-      border-radius: 20px;
-      cursor: pointer;
+      background: #333; padding: 10px 20px;
+      border-radius: 20px; cursor: pointer;
     }
-
-    .tab.active {
-      background: #28a745;
-    }
-
+    .tab.active { background: #28a745; }
     .categories, .channels {
-      display: flex;
-      overflow-x: auto;
-      gap: 10px;
-      margin-bottom: 15px;
+      display: flex; overflow-x: auto; gap: 10px; margin-bottom: 15px;
     }
-
     .category, .channel {
-      background: #222;
-      padding: 10px 15px;
-      border-radius: 10px;
-      white-space: nowrap;
-      cursor: pointer;
+      background: #222; padding: 10px 15px;
+      border-radius: 10px; white-space: nowrap; cursor: pointer;
       flex: 0 0 auto;
     }
-
-    .category:hover, .channel:hover {
-      background-color: #444;
+    .category:hover, .channel:hover { background-color: #444; }
+    .category.active { background-color: #28a745; }
+    video {
+      width: 100%; height: 400px;
+      border: none; border-radius: 12px;
+      margin-top: 20px; background: #000;
     }
-
-    .category.active {
-      background-color: #28a745;
-    }
-
-    iframe {
-      width: 100%;
-      height: 400px;
-      border: none;
-      border-radius: 12px;
-      margin-top: 20px;
-    }
-
-    @media(max-width: 768px) {
-      iframe {
-        height: 250px;
-      }
-    }
+    @media(max-width: 768px) { video { height: 250px; } }
   </style>
 </head>
 <body>
-
 <div class="container">
   <div class="login" id="login">
     <h2>تسجيل الدخول Xtream</h2>
@@ -141,7 +72,6 @@
     <button onclick="login()">دخول</button>
     <div id="error" style="color:red; text-align:center;"></div>
   </div>
-
   <div class="dashboard" id="dashboard">
     <div class="info">
       <div>👤 المستخدم: <span id="user_name"></span></div>
@@ -150,141 +80,177 @@
       <div>🔌 المتصلين: <span id="active_cons"></span></div>
       <div><button onclick="logout()">🚪 خروج</button></div>
     </div>
-
     <div class="tabs">
       <div class="tab active" onclick="switchTab('live')">📺 قنوات</div>
       <div class="tab" onclick="switchTab('vod')">🎬 أفلام</div>
       <div class="tab" onclick="switchTab('series')">📚 مسلسلات</div>
     </div>
-
     <div class="categories" id="categories"></div>
     <div class="channels" id="channels"></div>
-    <iframe id="player" allowfullscreen></iframe>
+    <video id="player" controls autoplay></video>
   </div>
 </div>
-
 <script>
-  let currentTab = "live";
-  const server = localStorage.getItem("server");
-  const username = localStorage.getItem("username");
-  const password = localStorage.getItem("password");
+let currentTab = "live";
+const server = localStorage.getItem("server");
+const username = localStorage.getItem("username");
+const password = localStorage.getItem("password");
+const proxyUrl = "http://iptv-player.rf.gd/proxy.php";
 
-  if (server && username && password) {
-    showDashboard();
-  } else {
-    document.getElementById("login").style.display = "block";
-  }
+if (server && username && password) {
+  showDashboard();
+} else {
+  document.getElementById("login").style.display = "block";
+}
 
-  function switchTab(tab) {
-    currentTab = tab;
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
-    loadCategories();
-  }
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  loadCategories();
+}
 
-  async function login() {
-    const s = document.getElementById("server").value.trim();
-    const u = document.getElementById("username").value.trim();
-    const p = document.getElementById("password").value.trim();
-    const err = document.getElementById("error");
+async function login() {
+  const s = document.getElementById("server").value.trim();
+  const u = document.getElementById("username").value.trim();
+  const p = document.getElementById("password").value.trim();
+  const err = document.getElementById("error");
 
-    if (!s || !u || !p) return err.textContent = "يرجى إدخال جميع البيانات";
+  if (!s || !u || !p) return err.textContent = "يرجى إدخال جميع البيانات";
 
-    try {
-      const res = await fetch(`${s}/player_api.php?username=${u}&password=${p}`);
-      const data = await res.json();
-
-      if (data.user_info && data.user_info.auth == 1) {
-        localStorage.setItem("server", s);
-        localStorage.setItem("username", u);
-        localStorage.setItem("password", p);
-        location.reload();
-      } else {
-        err.textContent = "بيانات غير صحيحة";
-      }
-    } catch {
-      err.textContent = "فشل الاتصال بالسيرفر";
-    }
-  }
-
-  async function showDashboard() {
-    document.getElementById("login").style.display = "none";
-    document.getElementById("dashboard").style.display = "block";
-
-    const res = await fetch(`${server}/player_api.php?username=${username}&password=${password}`);
-    const data = await res.json();
-    const info = data.user_info;
-
-    document.getElementById("user_name").textContent = username;
-    document.getElementById("created").textContent = info.created_at;
-    document.getElementById("exp_date").textContent = new Date(info.exp_date * 1000).toLocaleDateString();
-    document.getElementById("active_cons").textContent = info.active_cons;
-
-    loadCategories();
-  }
-
-  async function loadCategories() {
-    let endpoint = {
-      live: "get_live_categories",
-      vod: "get_vod_categories",
-      series: "get_series_categories"
-    }[currentTab];
-
-    const res = await fetch(`${server}/player_api.php?username=${username}&password=${password}&action=${endpoint}`);
-    const data = await res.json();
-
-    const categoriesDiv = document.getElementById("categories");
-    categoriesDiv.innerHTML = '';
-    data.forEach(cat => {
-      const div = document.createElement("div");
-      div.className = "category";
-      div.textContent = cat.category_name;
-      div.onclick = () => {
-        document.querySelectorAll(".category").forEach(c => c.classList.remove("active"));
-        div.classList.add("active");
-        loadChannels(cat.category_id);
-      };
-      categoriesDiv.appendChild(div);
+  try {
+    const res = await fetch(proxyUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ server: s, username: u, password: p, action: "user_info" })
     });
-  }
-
-  async function loadChannels(cat_id) {
-    let action = {
-      live: "get_live_streams",
-      vod: "get_vod_streams",
-      series: "get_series"
-    }[currentTab];
-
-    const res = await fetch(`${server}/player_api.php?username=${username}&password=${password}&action=${action}`);
     const data = await res.json();
 
-    const channelsDiv = document.getElementById("channels");
-    channelsDiv.innerHTML = '';
+    if (data.user_info && data.user_info.auth == 1) {
+      localStorage.setItem("server", s);
+      localStorage.setItem("username", u);
+      localStorage.setItem("password", p);
+      location.reload();
+    } else {
+      err.textContent = "بيانات غير صحيحة";
+    }
+  } catch {
+    err.textContent = "فشل الاتصال بالسيرفر";
+  }
+}
 
-    data
-      .filter(i => i.category_id == cat_id)
-      .forEach(item => {
-        const div = document.createElement("div");
-        div.className = "channel";
-        div.textContent = item.name;
-        div.onclick = () => play(item.stream_id);
-        channelsDiv.appendChild(div);
-      });
+async function showDashboard() {
+  document.getElementById("login").style.display = "none";
+  document.getElementById("dashboard").style.display = "block";
+
+  const res = await fetch(proxyUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ server, username, password, action: "user_info" })
+  });
+  const data = await res.json();
+  const info = data.user_info;
+
+  document.getElementById("user_name").textContent = username;
+  document.getElementById("created").textContent = info.created_at;
+  document.getElementById("exp_date").textContent = new Date(info.exp_date * 1000).toLocaleDateString();
+  document.getElementById("active_cons").textContent = info.active_cons;
+
+  loadCategories();
+}
+
+async function loadCategories() {
+  let endpoint = {
+    live: "get_live_categories",
+    vod: "get_vod_categories",
+    series: "get_series_categories"
+  }[currentTab];
+
+  const res = await fetch(proxyUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ server, username, password, action: endpoint })
+  });
+
+  const data = await res.json();
+  const categoriesDiv = document.getElementById("categories");
+  categoriesDiv.innerHTML = '';
+
+  data.forEach(cat => {
+    const div = document.createElement("div");
+    div.className = "category";
+    div.textContent = cat.category_name;
+    div.onclick = () => {
+      document.querySelectorAll(".category").forEach(c => c.classList.remove("active"));
+      div.classList.add("active");
+      loadChannels(cat.category_id);
+    };
+    categoriesDiv.appendChild(div);
+  });
+}
+
+async function loadChannels(cat_id) {
+  let action = {
+    live: "get_live_streams",
+    vod: "get_vod_streams",
+    series: "get_series"
+  }[currentTab];
+
+  const res = await fetch(proxyUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ server, username, password, action })
+  });
+
+  const data = await res.json();
+  const channelsDiv = document.getElementById("channels");
+  channelsDiv.innerHTML = '';
+
+  data.filter(i => i.category_id == cat_id).forEach(item => {
+    const div = document.createElement("div");
+    div.className = "channel";
+    div.textContent = item.name;
+    div.onclick = () => play(item.stream_id);
+    channelsDiv.appendChild(div);
+  });
+}
+
+function play(id) {
+  const video = document.getElementById("player");
+  const url = currentTab === "live"
+    ? `${server}/live/${username}/${password}/${id}.m3u8`
+    : `${server}/movie/${username}/${password}/${id}.mp4`;
+
+  if (window.hls) {
+    window.hls.destroy();
+    window.hls = null;
   }
 
-  function play(id) {
-    const url = currentTab === "live"
-      ? `${server}/live/${username}/${password}/${id}.m3u8`
-      : `${server}/movie/${username}/${password}/${id}.mp4`;
-
-    document.getElementById("player").src = url;
+  if (Hls.isSupported()) {
+    const hls = new Hls({ autoStartLoad: true, startLevel: 1, lowLatencyMode: true });
+    hls.loadSource(url);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, function () {
+      video.play();
+    });
+    window.hls = hls;
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = url;
+    video.addEventListener('loadedmetadata', function () {
+      video.play();
+    });
+  } else {
+    alert("المتصفح لا يدعم تشغيل هذا النوع من البث");
   }
+}
 
-  function logout() {
+function logout() {
+  const confirmLogout = confirm("هل أنت متأكد أنك تريد تسجيل الخروج؟");
+  if (confirmLogout) {
     localStorage.clear();
     location.reload();
   }
+}
 </script>
-
 </body>
 </html>
